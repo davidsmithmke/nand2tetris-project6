@@ -1,0 +1,20 @@
+# Simulator output files
+*.out
+
+# Java
+.class
+
+# Java Documentation
+doc/
+
+# Binaries
+bin/
+*.hack
+
+# Merge Backups
+.orig
+
+# Eclipse Specific
+.classpath
+.project
+.settings/
