@@ -91,4 +91,13 @@ public class Code {
 		
 		return this.jumpMnemonics.get(mnemonic);
 	}
+	
+	// Format a number as a 15-bit, 0-padded binary number.
+	public String formatNumberAsBinary(String number) {
+		int value = Integer.parseInt(number);
+		String binaryNumber = Integer.toBinaryString(value);
+		String formattedBinaryNumber =
+				String.format("%15s", binaryNumber).replace(' ', '0');
+		return formattedBinaryNumber;
+	}
 }
