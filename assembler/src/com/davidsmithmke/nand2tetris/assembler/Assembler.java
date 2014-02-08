@@ -10,6 +10,7 @@ public class Assembler {
 	private File assemblyCode;
 	private BufferedWriter machineCode;
 	private Code encoder;
+	private SymbolTable symbolTable;
 	
 	public Assembler(File source, File target) throws IOException {
 		this.assemblyCode = source;
@@ -20,11 +21,31 @@ public class Assembler {
 		
 		// Initialize assembler components.
 		this.encoder = new Code();
+		this.symbolTable = new SymbolTable();
 	}
 	
 	// Translate assembly file to machine language.
 	public void translate() throws IOException {
+		this.recordLabelAddress();
 		this.parse();
+	}
+	
+	private void recordLabelAddress() throws IOException {
+		Parser parser = new Parser(this.assemblyCode);
+		while (parser.hasMoreCommands()) {
+			parser.advance();
+			
+			CommandType commandType = parser.commandType();
+			
+			if (commandType.equals(CommandType.L_COMMAND)) {
+				String symbol = parser.symbol();
+				int address = this.symbolTable.getProgramAddress();
+				this.symbolTable.addEntry(symbol, address);
+			} else {
+				this.symbolTable.incrementProgramAddress();
+			}
+		}
+		parser.close();
 	}
 		
 	// Parse source file.
@@ -34,11 +55,32 @@ public class Assembler {
 			parser.advance();
 	
 			CommandType commandType = parser.commandType();
-			String instruction = "1110101010000000";  // No op instruction
+			String instruction = null;
 			
 			if (commandType.equals(CommandType.A_COMMAND)) {
 				// Format A-Instruction.
-				String address = parser.symbol();
+				String symbol = parser.symbol();
+				Character firstCharacter = symbol.charAt(0);
+				boolean isSymbol = (!Character.isDigit(firstCharacter));
+				
+				String address = null;
+				if (isSymbol) {
+					boolean symbolExists = this.symbolTable.contains(symbol);
+					
+					// Record address if symbol does not exist (variable).
+					if (!symbolExists) {
+						int dataAddress = this.symbolTable.getDataAddress();
+						this.symbolTable.addEntry(symbol, dataAddress);
+						this.symbolTable.incrementDataAddress();
+					}
+						
+					// Get address  of symbol.
+					address = Integer.toString(
+							this.symbolTable.getAddress(symbol));
+				} else {
+					address = symbol;
+				}
+				
 				instruction = this.formatAInstruction(address);
 			} else if (commandType.equals(CommandType.C_COMMAND)) {
 				// Format C-Instruction
@@ -48,9 +90,11 @@ public class Assembler {
 				instruction = this.formatCInstruction(comp, dest, jump);
 			}
 	
-			// Write binary instruction to file.
-			this.machineCode.write(instruction);
-			this.machineCode.newLine();
+			if (!commandType.equals(CommandType.L_COMMAND)) {
+				// Write binary instruction to file.
+				this.machineCode.write(instruction);
+				this.machineCode.newLine();
+			}
 		}
 		
 		// Release resources.
